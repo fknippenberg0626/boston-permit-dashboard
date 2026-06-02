@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boston Building Permit Trends</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: 'DM Sans', sans-serif;
+    color: #1C2B4A;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    background: #ffffff;
+    /* No scrollbar on the iframe page itself */
+    overflow-x: hidden;
+  }
+
+  .bpa-dash {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+  }
+
+  /* ── Metric cards ── */
+  .bpa-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 36px;
+  }
+  .bpa-metric {
+    background: #F7F6F2;
+    border: 1px solid #DDD9CF;
+    border-radius: 10px;
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .bpa-metric.bpa-accent { background: #1C2B4A; border-color: #1C2B4A; }
+  .bpa-metric-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6B6965;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .bpa-metric.bpa-accent .bpa-metric-label { color: rgba(255,255,255,0.55); }
+  .bpa-metric-val { font-size: 28px; font-weight: 600; color: #1C2B4A; line-height: 1; margin-bottom: 4px; }
+  .bpa-metric.bpa-accent .bpa-metric-val { color: #ffffff; }
+  .bpa-metric-sub { font-size: 12px; color: #6B6965; }
+  .bpa-metric.bpa-accent .bpa-metric-sub { color: rgba(255,255,255,0.5); }
+  .bpa-metric-sub.bpa-down { color: #b91c1c; }
+  .bpa-metric-sub.bpa-up   { color: #166534; }
+  .bpa-metric.bpa-accent .bpa-metric-sub.bpa-down { color: #fca5a5; }
+  .bpa-metric.bpa-accent .bpa-metric-sub.bpa-up   { color: #86efac; }
+  .bpa-accent-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: #C49A3C; border-radius: 0 0 10px 10px; }
+
+  /* ── Tabs ── */
+  .bpa-tabs {
+    display: flex; gap: 4px;
+    border-bottom: 1px solid #DDD9CF;
+    margin-bottom: 28px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .bpa-tabs::-webkit-scrollbar { display: none; }
+  .bpa-tab {
+    padding: 10px 18px; font-size: 13px;
+    font-family: 'DM Sans', sans-serif; font-weight: 500;
+    border: none; background: none; color: #6B6965;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .bpa-tab:hover { color: #1C2B4A; }
+  .bpa-tab.bpa-active { color: #1C2B4A; border-bottom-color: #C49A3C; font-weight: 600; }
+
+  /* ── Views ── */
+  .bpa-view { display: none; }
+  .bpa-view.bpa-active { display: block; }
+
+  /* ── Filter row ── */
+  .bpa-filters { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .bpa-filters label { font-size: 12px; color: #6B6965; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+  .bpa-filters select {
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    padding: 6px 10px; border-radius: 6px;
+    border: 1px solid #DDD9CF; background: #fff; color: #1C2B4A; cursor: pointer;
+  }
+
+  /* ── Snapshot button ── */
+  .bpa-snap {
+    margin-left: auto; padding: 7px 14px;
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+    border-radius: 6px; border: 1px solid #DDD9CF;
+    background: #fff; color: #6B6965; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .bpa-snap:hover { background: #1C2B4A; color: #fff; border-color: #1C2B4A; }
+  .bpa-snap svg { width: 14px; height: 14px; }
+
+  /* ── Legend ── */
+  .bpa-legend { display: flex; gap: 18px; margin-bottom: 14px; flex-wrap: wrap; }
+  .bpa-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6B6965; }
+  .bpa-legend-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ── Chart ── */
+  .bpa-chart-wrap { position: relative; width: 100%; height: 340px; }
+  .bpa-chart-wrap.bpa-tall { height: 420px; }
+
+  /* ── Footer ── */
+  .bpa-chart-footer { margin-top: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .bpa-status { font-size: 11px; color: #A09E97; }
+
+  /* ── Insight ── */
+  .bpa-insight {
+    background: #F7F6F2; border-left: 3px solid #C49A3C;
+    border-radius: 0 6px 6px 0; padding: 12px 16px;
+    margin-top: 20px; font-size: 13px; color: #6B6965; line-height: 1.6;
+  }
+  .bpa-insight strong { color: #1C2B4A; font-weight: 600; }
+
+  /* ── Loading ── */
+  .bpa-spinner {
+    width: 20px; height: 20px;
+    border: 2px solid #DDD9CF; border-top-color: #1C2B4A;
+    border-radius: 50%; animation: bpa-spin 0.8s linear infinite; margin: 8px 0;
+  }
+  @keyframes bpa-spin { to { transform: rotate(360deg); } }
+  .bpa-error { text-align: center; padding: 40px 20px; color: #6B6965; font-size: 13px; }
+
+  @media (max-width: 600px) {
+    .bpa-dash { padding: 20px 16px 36px; }
+    .bpa-metrics { grid-template-columns: repeat(2, 1fr); }
+    .bpa-snap { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bpa-dash">
+
+  <div class="bpa-metrics" id="bpa-metrics">
+    <div class="bpa-metric"><div class="bpa-spinner"></div></div>
+    <div class="bpa-metric"><div class="bpa-spinner"></div></div>
+    <div class="bpa-metric"><div class="bpa-spinner"></div></div>
+    <div class="bpa-metric"><div class="bpa-spinner"></div></div>
+  </div>
+
+  <nav class="bpa-tabs" role="tablist">
+    <button class="bpa-tab bpa-active" role="tab" aria-selected="true"  onclick="bpaShow('year',this)">By year</button>
+    <button class="bpa-tab"            role="tab" aria-selected="false" onclick="bpaShow('month',this)">2026 month by month</button>
+    <button class="bpa-tab"            role="tab" aria-selected="false" onclick="bpaShow('type',this)">By permit type</button>
+  </nav>
+
+  <!-- Year view -->
+  <section id="bpa-year" class="bpa-view bpa-active">
+    <div class="bpa-filters">
+      <label for="bpa-type-filter">Permit type</label>
+      <select id="bpa-type-filter" onchange="bpaRenderYear()">
+        <option value="all">All types</option>
+      </select>
+      <button class="bpa-snap" onclick="bpaSnap('bpaYearChart','boston-permits-by-year')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download snapshot
+      </button>
+    </div>
+    <div class="bpa-legend">
+      <div class="bpa-legend-item"><span class="bpa-legend-sq" style="background:#1C2B4A;"></span>Historical</div>
+      <div class="bpa-legend-item"><span class="bpa-legend-sq" style="background:#C49A3C;"></span>Peak year</div>
+      <div class="bpa-legend-item"><span class="bpa-legend-sq" style="background:#2a7a4a;"></span>Current year</div>
+    </div>
+    <div class="bpa-chart-wrap">
+      <canvas id="bpaYearChart"></canvas>
+    </div>
+    <div class="bpa-chart-footer">
+      <span class="bpa-status" id="bpa-year-status"></span>
+    </div>
+    <div class="bpa-insight" id="bpa-year-insight" style="display:none;"></div>
+  </section>
+
+  <!-- Month view -->
+  <section id="bpa-month" class="bpa-view">
+    <div class="bpa-filters">
+      <label for="bpa-cmp-year">Compare to</label>
+      <select id="bpa-cmp-year" onchange="bpaRenderMonth()">
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+        <option value="2023">2023</option>
+      </select>
+      <button class="bpa-snap" onclick="bpaSnap('bpaMonthChart','boston-permits-2026-monthly')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download snapshot
+      </button>
+    </div>
+    <div class="bpa-legend">
+      <div class="bpa-legend-item"><span class="bpa-legend-sq" style="background:#2a7a4a;"></span>2026</div>
+      <div class="bpa-legend-item"><span class="bpa-legend-sq" style="background:#A09E97;"></span>Prior year</div>
+    </div>
+    <div class="bpa-chart-wrap">
+      <canvas id="bpaMonthChart"></canvas>
+    </div>
+    <div class="bpa-chart-footer">
+      <span class="bpa-status" id="bpa-month-status"></span>
+    </div>
+    <div class="bpa-insight" id="bpa-month-insight" style="display:none;"></div>
+  </section>
+
+  <!-- Type view -->
+  <section id="bpa-type" class="bpa-view">
+    <div class="bpa-filters">
+      <label for="bpa-type-year">Year</label>
+      <select id="bpa-type-year" onchange="bpaRenderType()">
+        <option value="2026">2026 YTD</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+        <option value="2023">2023</option>
+      </select>
+      <button class="bpa-snap" onclick="bpaSnap('bpaTypeChart','boston-permits-by-type')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download snapshot
+      </button>
+    </div>
+    <div class="bpa-chart-wrap bpa-tall" id="bpa-type-wrap">
+      <canvas id="bpaTypeChart"></canvas>
+    </div>
+    <div class="bpa-chart-footer">
+      <span class="bpa-status" id="bpa-type-status"></span>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function() {
+  var API = 'https://data.boston.gov/api/3/action/datastore_search_sql';
+  var RID = '6ddcd912-32a0-43df-9908-63574f8c7e77';
+  var allData = [];
+  var yearChart, monthChart, typeChart;
+
+  function getYear(d)  { return d ? parseInt(d.substring(0,4)) : null; }
+  function getMonth(d) { return d ? parseInt(d.substring(5,7)) : null; }
+  function groupBy(arr, fn) {
+    return arr.reduce(function(acc,x){ var k=fn(x); if(k==null) return acc; acc[k]=(acc[k]||0)+1; return acc; },{});
+  }
+
+  var tt = { backgroundColor:'#1C2B4A', titleColor:'#fff', bodyColor:'rgba(255,255,255,0.75)', padding:10 };
+  var tk = { color:'#A09E97', font:{ size:11, family:'DM Sans' } };
+
+  function updateMetrics(data) {
+    var by = groupBy(data, function(r){ return getYear(r.issued_date); });
+    var yrs = Object.keys(by).map(Number).filter(function(y){return y>=2010&&y<=2026;}).sort(function(a,b){return a-b;});
+    var peak = yrs.reduce(function(b,y){return by[y]>(by[b]||0)?y:b;}, yrs[0]);
+    var pN=by[peak]||1, y24=by[2024]||0, y25=by[2025]||0, y26=by[2026]||0;
+    var drop=Math.round((1-y24/pN)*100), pace=y25?Math.round((y26/y25)*100):null;
+    document.getElementById('bpa-metrics').innerHTML=
+      '<div class="bpa-metric bpa-accent"><div class="bpa-metric-label">Peak year</div><div class="bpa-metric-val">'+peak+'</div><div class="bpa-metric-sub">'+pN.toLocaleString()+' permits issued</div><div class="bpa-accent-bar"></div></div>'+
+      '<div class="bpa-metric"><div class="bpa-metric-label">2024 full year</div><div class="bpa-metric-val">'+y24.toLocaleString()+'</div><div class="bpa-metric-sub bpa-down">↓ '+drop+'% below peak</div></div>'+
+      '<div class="bpa-metric"><div class="bpa-metric-label">2025 full year</div><div class="bpa-metric-val">'+y25.toLocaleString()+'</div><div class="bpa-metric-sub '+(y25>y24?'bpa-up':'bpa-down')+'">'+(y25>y24?'↑':'↓')+' vs 2024</div></div>'+
+      '<div class="bpa-metric"><div class="bpa-metric-label">2026 YTD</div><div class="bpa-metric-val">'+y26.toLocaleString()+'</div><div class="bpa-metric-sub '+(pace&&pace>=100?'bpa-up':'bpa-down')+'">'+(pace?(pace>=100?'↑':'↓')+' '+pace+'% of 2025 pace':'—')+'</div></div>';
+  }
+
+  window.bpaRenderYear = function() {
+    var tf=document.getElementById('bpa-type-filter').value;
+    var d=tf==='all'?allData:allData.filter(function(r){return r.permittypedescr===tf;});
+    var by=groupBy(d,function(r){return getYear(r.issued_date);});
+    var yrs=Object.keys(by).map(Number).filter(function(y){return y>=2010&&y<=2026;}).sort(function(a,b){return a-b;});
+    var peak=yrs.reduce(function(b,y){return (by[y]||0)>(by[b]||0)?y:b;},yrs[0]);
+    var counts=yrs.map(function(y){return by[y]||0;});
+    var colors=yrs.map(function(y){return y===2026?'#2a7a4a':y===peak?'#C49A3C':'#1C2B4A';});
+    if(yearChart) yearChart.destroy();
+    yearChart=new Chart(document.getElementById('bpaYearChart'),{
+      type:'bar',
+      data:{labels:yrs.map(String),datasets:[{data:counts,backgroundColor:colors,borderRadius:3,borderSkipped:false}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{...tt,callbacks:{afterLabel:function(ctx){
+          var pct=Math.round((ctx.raw/(by[peak]||1))*100);
+          return yrs[ctx.dataIndex]===peak?'← peak year':pct+'% of peak';
+        }}}},
+        scales:{
+          x:{grid:{display:false},ticks:{...tk,maxRotation:0,autoSkip:false}},
+          y:{grid:{color:'rgba(160,158,151,0.15)'},ticks:tk,beginAtZero:true}
+        }
+      }
+    });
+    document.getElementById('bpa-year-status').textContent=counts.reduce(function(a,b){return a+b;},0).toLocaleString()+' total permits · 2010–'+yrs[yrs.length-1]+' · City of Boston ISD';
+    var ins=document.getElementById('bpa-year-insight');
+    var y24c=by[2024]||0, pC=by[peak]||0;
+    if(pC&&y24c){ins.style.display='block';ins.innerHTML='<strong>Key takeaway:</strong> Boston permitting peaked in <strong>'+peak+'</strong> with <strong>'+pC.toLocaleString()+' permits</strong> and has fallen <strong>'+Math.round((1-y24c/pC)*100)+'%</strong> through 2024 — the weakest full year since 2010. This constrained supply environment means permitted projects carry significant competitive advantage.';}
+    notifyResize();
+  };
+
+  window.bpaRenderMonth = function() {
+    var cY=parseInt(document.getElementById('bpa-cmp-year').value);
+    var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function get(yr){var d=allData.filter(function(r){return getYear(r.issued_date)===yr;});return mo.map(function(_,i){return (groupBy(d,function(r){return getMonth(r.issued_date);})[i+1]||0);});}
+    var cur=get(2026),prev=get(cY);
+    if(monthChart) monthChart.destroy();
+    monthChart=new Chart(document.getElementById('bpaMonthChart'),{
+      type:'bar',
+      data:{labels:mo,datasets:[
+        {label:String(cY),data:prev,backgroundColor:'rgba(160,158,151,0.3)',borderColor:'#A09E97',borderWidth:1,borderRadius:3},
+        {label:'2026',data:cur,backgroundColor:'#2a7a4a',borderColor:'#1a5a34',borderWidth:1,borderRadius:3}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:tt},
+        scales:{x:{grid:{display:false},ticks:{...tk,font:{size:12,family:'DM Sans'}}},y:{grid:{color:'rgba(160,158,151,0.15)'},ticks:tk,beginAtZero:true}}
+      }
+    });
+    var ytd26=cur.reduce(function(a,b){return a+b;},0);
+    var ytdC=prev.slice(0,new Date().getMonth()+1).reduce(function(a,b){return a+b;},0);
+    var diff=ytd26-ytdC;
+    document.getElementById('bpa-month-status').textContent='2026 YTD: '+ytd26+' permits · same period '+cY+': '+ytdC+' ('+(diff>=0?'+':'')+diff+') · City of Boston ISD';
+    var ins=document.getElementById('bpa-month-insight');
+    ins.style.display='block';
+    ins.innerHTML=diff<0
+      ?'<strong>Pace alert:</strong> 2026 is running <strong>'+Math.abs(diff)+' permits behind</strong> the same period in '+cY+'. Less competition for approvals means projects that are ready to file have a real advantage.'
+      :'<strong>Pace note:</strong> 2026 is running <strong>'+diff+' permits ahead</strong> of the same period in '+cY+'. Activity appears to be recovering modestly.';
+    notifyResize();
+  };
+
+  window.bpaRenderType = function() {
+    var yr=parseInt(document.getElementById('bpa-type-year').value);
+    var d=allData.filter(function(r){return getYear(r.issued_date)===yr;});
+    var by=groupBy(d,function(r){return r.permittypedescr||'Unknown';});
+    var sorted=Object.entries(by).sort(function(a,b){return b[1]-a[1];}).slice(0,14);
+    var labels=sorted.map(function(e){var k=e[0];return k.length>35?k.substring(0,33)+'…':k;});
+    var vals=sorted.map(function(e){return e[1];});
+    var max=vals[0]||1;
+    var colors=vals.map(function(v){return 'rgba(28,43,74,'+(0.35+0.65*(v/max)).toFixed(2)+')';});
+    if(typeChart) typeChart.destroy();
+    var h=Math.max(420,sorted.length*36+80);
+    document.getElementById('bpa-type-wrap').style.height=h+'px';
+    typeChart=new Chart(document.getElementById('bpaTypeChart'),{
+      type:'bar',
+      data:{labels:labels,datasets:[{data:vals,backgroundColor:colors,borderRadius:3}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:tt},
+        scales:{x:{grid:{color:'rgba(160,158,151,0.15)'},ticks:tk,beginAtZero:true},y:{grid:{display:false},ticks:{color:'#3A3835',font:{size:11,family:'DM Sans'}}}}
+      }
+    });
+    document.getElementById('bpa-type-status').textContent=d.length.toLocaleString()+' total permits · '+(yr===2026?'2026 YTD':yr)+' · City of Boston ISD';
+    notifyResize();
+  };
+
+  window.bpaShow = function(v,btn) {
+    document.querySelectorAll('.bpa-view').forEach(function(el){el.classList.remove('bpa-active');});
+    document.querySelectorAll('.bpa-tab').forEach(function(el){el.classList.remove('bpa-active');el.setAttribute('aria-selected','false');});
+    document.getElementById('bpa-'+v).classList.add('bpa-active');
+    btn.classList.add('bpa-active'); btn.setAttribute('aria-selected','true');
+    if(v==='month'&&allData.length) bpaRenderMonth();
+    if(v==='type'&&allData.length)  bpaRenderType();
+  };
+
+  window.bpaSnap = function(canvasId, filename) {
+    var src=document.getElementById(canvasId); if(!src) return;
+    var off=document.createElement('canvas'); off.width=1200; off.height=630;
+    var ctx=off.getContext('2d');
+    ctx.fillStyle='#1C2B4A'; ctx.fillRect(0,0,1200,630);
+    ctx.fillStyle='rgba(196,154,60,0.12)'; ctx.fillRect(0,0,1200,70);
+    ctx.fillStyle='#C49A3C'; ctx.font='500 12px DM Sans,sans-serif';
+    ctx.fillText('BOSTON PERMIT ADVISORS · bostonpermitadvisors.com',36,44);
+    ctx.fillStyle='#ffffff'; ctx.font='400 20px DM Sans,sans-serif';
+    ctx.fillText('Boston Building Permit Trends',36,66);
+    ctx.fillStyle='#ffffff'; ctx.fillRect(36,88,1128,470);
+    var scale=Math.min(1100/src.width,450/src.height);
+    ctx.drawImage(src,(1200-src.width*scale)/2,96,src.width*scale,src.height*scale);
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font='11px DM Sans,sans-serif';
+    ctx.fillText('Source: City of Boston ISD Approved Building Permits · data.boston.gov',36,614);
+    ctx.textAlign='right';
+    ctx.fillText(new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}),1164,614);
+    var a=document.createElement('a'); a.download=filename+'.png'; a.href=off.toDataURL('image/png'); a.click();
+  };
+
+  // Tell parent iframe to resize
+  function notifyResize() {
+    var h = document.body.scrollHeight;
+    window.parent.postMessage({ bpaHeight: h }, '*');
+  }
+
+  function populateTypeFilter(data) {
+    var types=[...new Set(data.map(function(r){return r.permittypedescr;}).filter(Boolean))].sort();
+    var sel=document.getElementById('bpa-type-filter');
+    types.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;sel.appendChild(o);});
+  }
+
+  var sql='SELECT issued_date, permittypedescr, status FROM "'+RID+'" WHERE issued_date >= \'2010-01-01\' AND issued_date IS NOT NULL LIMIT 50000';
+  fetch(API+'?sql='+encodeURIComponent(sql))
+    .then(function(r){return r.json();})
+    .then(function(json){
+      allData=json.result&&json.result.records?json.result.records:[];
+      updateMetrics(allData);
+      populateTypeFilter(allData);
+      bpaRenderYear();
+    })
+    .catch(function(){
+      document.getElementById('bpa-metrics').innerHTML='';
+      document.getElementById('bpa-year').innerHTML='<div class="bpa-error"><p>Could not load permit data. Please try refreshing the page.</p></div>';
+    });
+})();
+</script>
+</body>
+</html>
