@@ -174,9 +174,14 @@
   // Fetch ALL Erect/New Construction records via datastore_search (always open).
   function fetchAllERT() {
     var url = BASE + '?resource_id=' + RID + '&filters=%7B%22permittypedescr%22%3A%22Erect%2FNew+Construction%22%7D&fields=issued_date%2Cpermittypedescr&limit=10000';
+    console.log('Fetching:', url);
     return fetch(url)
       .then(function(r) { return r.json(); })
-      .then(function(json) { return json.result && json.result.records ? json.result.records : []; });
+      .then(function(json) {
+        console.log('API response success:', json.success);
+        console.log('Records count:', json.result && json.result.records ? json.result.records.length : 'none');
+        return json.result && json.result.records ? json.result.records : [];
+      });
   });
   }
 
