@@ -171,21 +171,17 @@
     return arr.reduce(function(acc,x){ var k=fn(x); if(k==null) return acc; acc[k]=(acc[k]||0)+1; return acc; },{});
   }
 
-  // Fetch one year — uses datastore_search with date range filter via q
-  // CKAN datastore_search supports filters object for exact match,
-  // but for date ranges we use the SQL endpoint with simple params
-  function fetchYear(year) {
-    var start = year + '-01-01';
-    var end   = year + '-12-31';
-    // Use datastore_search_sql with date range — simple SELECT, no SUBSTRING
-    var sql = 'SELECT issued_date, permittypedescr FROM "' + RID + '" WHERE issued_date >= \'' + start + '\' AND issued_date <= \'' + end + '\' LIMIT 50000';
-    var url  = 'https://data.boston.gov/api/3/action/datastore_search_sql?sql=' + encodeURIComponent(sql);
+  // Fetch ALL Erect/New Construction records via datastore_search (always open).
+  function fetchAllERT() {
+    var url = BASE
+      + '?resource_id=' + RID
+      + '&filters=' + encodeURIComponent('{"permittypedescr":"Erect/New Construction"}')
+      + '&fields=issued_date,permittypedescr'
+      + '&limit=10000';
     return fetch(url)
-      .then(function(r){ return r.json(); })
-      .then(function(json){
-        var recs = json.result && json.result.records ? json.result.records : [];
-        return recs.filter(function(r){ return INCLUDED_TYPES.indexOf(r.permittypedescr) !== -1; });
-      });
+      .then(function(r) { return r.json(); })
+      .then(function(json) { return json.result && json.result.records ? json.result.records : []; });
+  });
   }
 
   // Progress bar
@@ -544,29 +540,25 @@
     bpaDownload(off, filename);
   };
 
-  // ── Init: fetch one year at a time sequentially ────────
-
-  function fetchAllYears(index) {
-    if (index >= YEARS.length) {
-      setProgress(YEARS.length, YEARS.length, 'Data loaded');
-      showDashboard();
-      return;
-    }
-    var year = YEARS[index];
-    setProgress(index, YEARS.length, 'Loading ' + year + ' permits…');
-    fetchYear(year)
-      .then(function(records) {
-        yearData[year] = records;
-        fetchAllYears(index + 1);
-      })
-      .catch(function(err) {
-        console.warn('Failed to load ' + year + ', skipping:', err);
-        yearData[year] = [];
-        fetchAllYears(index + 1);
+  // ── Init ────
+  setProgress(0, 1, 'Loading new construction permits…');
+  fetchAllERT()
+    .then(function(records) {
+      YEARS.forEach(function(y) { yearData[y] = []; });
+      records.forEach(function(r) {
+        if (!r.issued_date) return;
+        var y = parseInt(r.issued_date.substring(0, 4));
+        if (yearData[y]) yearData[y].push(r);
       });
-  }
-
-  fetchAllYears(0);
+      setProgress(1, 1, 'Data loaded');
+      showDashboard();
+    })
+    .catch(function(err) {
+      console.error('Failed to load permit data:', err);
+      document.getElementById('bpa-progress').style.display = 'none';
+      document.getElementById('bpa-year').style.display = 'block';
+      document.getElementById('bpa-year').innerHTML = '<div class="bpa-error"><p>Could not load permit data. Please try refreshing.</p></div>';
+    });
 
 })();
 </script>
