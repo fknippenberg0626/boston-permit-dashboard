@@ -175,7 +175,7 @@
   function fetchAllERT() {
     var url = BASE
       + '?resource_id=' + RID
-      + '&filters=' + encodeURIComponent('{"permittypedescr":"Erect/New Construction"}')
+      + '&filters=%7B%22permittypedescr%22%3A%22Erect%2FNew+Construction%22%7D'
       + '&fields=issued_date,permittypedescr'
       + '&limit=10000';
     return fetch(url)
