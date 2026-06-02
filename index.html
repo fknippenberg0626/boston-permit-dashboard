@@ -10,11 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    font-family: 'DM Sans', sans-serif;
-    color: #1C2B4A; font-size: 15px; line-height: 1.6;
-    -webkit-font-smoothing: antialiased; background: #ffffff; overflow-x: hidden;
-  }
+  html, body { font-family: 'DM Sans', sans-serif; color: #1C2B4A; font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; background: #ffffff; overflow-x: hidden; }
   .bpa-dash { max-width: 960px; margin: 0 auto; padding: 32px 24px 48px; }
 
   .bpa-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 36px; }
@@ -27,9 +23,9 @@
   .bpa-metric-sub { font-size: 12px; color: #6B6965; }
   .bpa-metric.bpa-accent .bpa-metric-sub { color: rgba(255,255,255,0.5); }
   .bpa-metric-sub.bpa-down { color: #b91c1c; }
-  .bpa-metric-sub.bpa-up   { color: #166534; }
+  .bpa-metric-sub.bpa-up { color: #166534; }
   .bpa-metric.bpa-accent .bpa-metric-sub.bpa-down { color: #fca5a5; }
-  .bpa-metric.bpa-accent .bpa-metric-sub.bpa-up   { color: #86efac; }
+  .bpa-metric.bpa-accent .bpa-metric-sub.bpa-up { color: #86efac; }
   .bpa-accent-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: #C49A3C; border-radius: 0 0 10px 10px; }
 
   .bpa-tabs { display: flex; gap: 4px; border-bottom: 1px solid #DDD9CF; margin-bottom: 28px; overflow-x: auto; scrollbar-width: none; }
@@ -62,10 +58,13 @@
   .bpa-insight { background: #F7F6F2; border-left: 3px solid #C49A3C; border-radius: 0 6px 6px 0; padding: 12px 16px; margin-top: 20px; font-size: 13px; color: #6B6965; line-height: 1.6; }
   .bpa-insight strong { color: #1C2B4A; font-weight: 600; }
 
-  .bpa-loading-overlay { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 60px 20px; color: #6B6965; font-size: 13px; }
-  .bpa-spinner { width: 18px; height: 18px; border: 2px solid #DDD9CF; border-top-color: #1C2B4A; border-radius: 50%; animation: bpa-spin 0.8s linear infinite; flex-shrink: 0; }
-  @keyframes bpa-spin { to { transform: rotate(360deg); } }
+  .bpa-progress { margin-bottom: 36px; }
+  .bpa-progress-label { font-size: 12px; color: #6B6965; margin-bottom: 8px; }
+  .bpa-progress-bar { height: 4px; background: #F0EEE8; border-radius: 2px; overflow: hidden; }
+  .bpa-progress-fill { height: 100%; background: #1C2B4A; border-radius: 2px; transition: width 0.3s ease; width: 0%; }
 
+  .bpa-spinner { width: 18px; height: 18px; border: 2px solid #DDD9CF; border-top-color: #1C2B4A; border-radius: 50%; animation: bpa-spin 0.8s linear infinite; }
+  @keyframes bpa-spin { to { transform: rotate(360deg); } }
   .bpa-metric .bpa-spinner { margin: 6px 0; }
   .bpa-error { text-align: center; padding: 40px 20px; color: #6B6965; font-size: 13px; }
 
@@ -79,24 +78,25 @@
 <body>
 <div class="bpa-dash">
 
-  <div class="bpa-metrics" id="bpa-metrics">
-    <div class="bpa-metric"><div class="bpa-spinner"></div></div>
-    <div class="bpa-metric"><div class="bpa-spinner"></div></div>
-    <div class="bpa-metric"><div class="bpa-spinner"></div></div>
-    <div class="bpa-metric"><div class="bpa-spinner"></div></div>
+  <!-- Loading progress -->
+  <div class="bpa-progress" id="bpa-progress">
+    <div class="bpa-progress-label" id="bpa-progress-label">Loading permit data…</div>
+    <div class="bpa-progress-bar"><div class="bpa-progress-fill" id="bpa-progress-fill"></div></div>
   </div>
 
-  <nav class="bpa-tabs" role="tablist">
+  <div class="bpa-metrics" id="bpa-metrics" style="display:none;"><!-- filled by JS --></div>
+
+  <nav class="bpa-tabs" role="tablist" style="display:none;" id="bpa-tabs">
     <button class="bpa-tab bpa-active" role="tab" onclick="bpaShow('year',this)">By year</button>
     <button class="bpa-tab" role="tab" onclick="bpaShow('month',this)">2026 month by month</button>
     <button class="bpa-tab" role="tab" onclick="bpaShow('type',this)">By permit type</button>
   </nav>
 
   <!-- Year view -->
-  <section id="bpa-year" class="bpa-view bpa-active">
+  <section id="bpa-year" class="bpa-view bpa-active" style="display:none;">
     <div class="bpa-filters">
       <label for="bpa-type-filter">Permit type</label>
-      <select id="bpa-type-filter" onchange="bpaTypeFilterChanged()">
+      <select id="bpa-type-filter" onchange="bpaRenderYear()">
         <option value="all">All types</option>
       </select>
       <button class="bpa-snap" onclick="bpaSnap('bpaYearChart','boston-permits-by-year')">
@@ -158,102 +158,121 @@
 
 </div>
 <script>
-(function() {
-  var API  = 'https://data.boston.gov/api/3/action/datastore_search_sql';
+(function () {
+  var BASE = 'https://data.boston.gov/api/3/action/datastore_search';
   var RID  = '6ddcd912-32a0-43df-9908-63574f8c7e77';
+  var YEARS = [2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026];
 
-  // allData holds the current working dataset (all types OR filtered by type)
-  var allData      = [];
-  // yearCountsAll holds the full year counts across ALL types (for metrics)
-  var yearCountsAll = {};
+  // Master data store: yearData[year] = array of {issued_date, permittypedescr}
+  var yearData = {};
   var yearChart, monthChart, typeChart;
-  var dataLoaded = false;
-
-  function getYear(d)  { return d ? parseInt(d.substring(0,4)) : null; }
-  function getMonth(d) { return d ? parseInt(d.substring(5,7)) : null; }
-  function groupBy(arr, fn) {
-    return arr.reduce(function(acc,x){ var k=fn(x); if(k==null) return acc; acc[k]=(acc[k]||0)+1; return acc; },{});
-  }
 
   var tt = { backgroundColor:'#1C2B4A', titleColor:'#fff', bodyColor:'rgba(255,255,255,0.75)', padding:10 };
   var tk = { color:'#A09E97', font:{ size:11, family:'DM Sans' } };
 
-  // ── Fetch helpers ──────────────────────────────────────
+  function getMonth(d) { return d ? parseInt(d.substring(5,7)) : null; }
 
-  function sqlFetch(sql) {
-    return fetch(API + '?sql=' + encodeURIComponent(sql)).then(function(r){ return r.json(); });
+  function groupBy(arr, fn) {
+    return arr.reduce(function(acc,x){ var k=fn(x); if(k==null) return acc; acc[k]=(acc[k]||0)+1; return acc; },{});
   }
 
-  // Fetch all records for a given type (or all types) using pagination
-  function fetchByType(type) {
-    var baseWhere = "issued_date >= '2010-01-01' AND issued_date IS NOT NULL";
-    if (type !== 'all') {
-      baseWhere += " AND permittypedescr = '" + type.replace(/'/g,"''") + "'";
-    }
-    // For "all types" we use a year-grouped aggregate query — no need to pull every row
-    if (type === 'all') {
-      return fetchAllAggregated();
-    }
-    // For a specific type, pull all rows (ERT has ~4,239 rows — well under limits)
-    var sql = 'SELECT issued_date, permittypedescr, status FROM "' + RID + '" WHERE ' + baseWhere + ' LIMIT 50000';
-    return sqlFetch(sql).then(function(json){ return json.result && json.result.records ? json.result.records : []; });
+  // Fetch one year — uses datastore_search with date range filter via q
+  // CKAN datastore_search supports filters object for exact match,
+  // but for date ranges we use the SQL endpoint with simple params
+  function fetchYear(year) {
+    var start = year + '-01-01';
+    var end   = year + '-12-31';
+    // Use datastore_search_sql with date range — simple SELECT, no SUBSTRING
+    var sql = 'SELECT issued_date, permittypedescr FROM "' + RID + '" WHERE issued_date >= \'' + start + '\' AND issued_date <= \'' + end + '\' LIMIT 50000';
+    var url  = 'https://data.boston.gov/api/3/action/datastore_search_sql?sql=' + encodeURIComponent(sql);
+    return fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(json){
+        return json.result && json.result.records ? json.result.records : [];
+      });
   }
 
-  // For "All types" we pre-aggregate by year+month in SQL to avoid the 50k row limit
-  function fetchAllAggregated() {
-    // Pull year and month counts via two separate queries to stay under limits
-    var sql = 'SELECT issued_date, permittypedescr FROM "' + RID + '" WHERE issued_date >= \'2010-01-01\' AND issued_date IS NOT NULL LIMIT 50000';
-    return sqlFetch(sql).then(function(json){ return json.result && json.result.records ? json.result.records : []; });
+  // Progress bar
+  function setProgress(done, total, label) {
+    var pct = Math.round((done/total)*100);
+    document.getElementById('bpa-progress-fill').style.width = pct + '%';
+    document.getElementById('bpa-progress-label').textContent = label || ('Loading ' + done + ' of ' + total + ' years…');
   }
 
-  // Fetch distinct permit types with counts (full dataset via aggregate SQL)
-  function fetchPermitTypes() {
-    var sql = 'SELECT permittypedescr, COUNT(*) as cnt FROM "' + RID + '" WHERE permittypedescr IS NOT NULL GROUP BY permittypedescr ORDER BY cnt DESC';
-    return sqlFetch(sql).then(function(json){ return json.result && json.result.records ? json.result.records : []; });
-  }
-
-  // Fetch year-level counts for ALL types combined via aggregate (no row limit issue)
-  function fetchYearCounts() {
-    var sql = 'SELECT SUBSTRING(issued_date, 1, 4) as yr, COUNT(*) as cnt FROM "' + RID + '" WHERE issued_date >= \'2010-01-01\' AND issued_date IS NOT NULL GROUP BY yr ORDER BY yr';
-    return sqlFetch(sql).then(function(json){ return json.result && json.result.records ? json.result.records : []; });
-  }
-
-  // Fetch year+month counts for ALL types
-  function fetchYearMonthCounts() {
-    var sql = 'SELECT SUBSTRING(issued_date, 1, 4) as yr, SUBSTRING(issued_date, 6, 2) as mo, COUNT(*) as cnt FROM "' + RID + '" WHERE issued_date >= \'2010-01-01\' AND issued_date IS NOT NULL GROUP BY yr, mo ORDER BY yr, mo';
-    return sqlFetch(sql).then(function(json){ return json.result && json.result.records ? json.result.records : []; });
+  // Show dashboard after loading
+  function showDashboard() {
+    document.getElementById('bpa-progress').style.display = 'none';
+    document.getElementById('bpa-metrics').style.display  = 'grid';
+    document.getElementById('bpa-tabs').style.display     = 'flex';
+    document.getElementById('bpa-year').style.display     = 'block';
+    populateTypeFilter();
+    updateMetrics();
+    bpaRenderYear();
   }
 
   // ── Metrics ────────────────────────────────────────────
 
-  function updateMetrics(byYear) {
-    var yrs  = Object.keys(byYear).map(Number).filter(function(y){return y>=2010&&y<=2026;}).sort(function(a,b){return a-b;});
-    var peak = yrs.reduce(function(b,y){return byYear[y]>(byYear[b]||0)?y:b;}, yrs[0]);
-    var pN=byYear[peak]||1, y24=byYear[2024]||0, y25=byYear[2025]||0, y26=byYear[2026]||0;
+  function getYearCount(year) {
+    return yearData[year] ? yearData[year].length : 0;
+  }
+
+  function updateMetrics() {
+    var counts = {};
+    YEARS.forEach(function(y){ counts[y] = getYearCount(y); });
+    var peak = YEARS.reduce(function(b,y){ return counts[y]>counts[b]?y:b; }, YEARS[0]);
+    var pN=counts[peak]||1, y24=counts[2024]||0, y25=counts[2025]||0, y26=counts[2026]||0;
     var drop=Math.round((1-y24/pN)*100), pace=y25?Math.round((y26/y25)*100):null;
-    document.getElementById('bpa-metrics').innerHTML=
+    document.getElementById('bpa-metrics').innerHTML =
       '<div class="bpa-metric bpa-accent"><div class="bpa-metric-label">Peak year</div><div class="bpa-metric-val">'+peak+'</div><div class="bpa-metric-sub">'+pN.toLocaleString()+' permits issued</div><div class="bpa-accent-bar"></div></div>'+
       '<div class="bpa-metric"><div class="bpa-metric-label">2024 full year</div><div class="bpa-metric-val">'+y24.toLocaleString()+'</div><div class="bpa-metric-sub bpa-down">↓ '+drop+'% below peak</div></div>'+
       '<div class="bpa-metric"><div class="bpa-metric-label">2025 full year</div><div class="bpa-metric-val">'+y25.toLocaleString()+'</div><div class="bpa-metric-sub '+(y25>y24?'bpa-up':'bpa-down')+'">'+(y25>y24?'↑':'↓')+' vs 2024</div></div>'+
       '<div class="bpa-metric"><div class="bpa-metric-label">2026 YTD</div><div class="bpa-metric-val">'+y26.toLocaleString()+'</div><div class="bpa-metric-sub '+(pace&&pace>=100?'bpa-up':'bpa-down')+'">'+(pace?(pace>=100?'↑':'↓')+' '+pace+'% of 2025 pace':'—')+'</div></div>';
   }
 
+  // ── Type filter dropdown ────────────────────────────────
+
+  function populateTypeFilter() {
+    // Collect all types across all years with total counts
+    var typeCounts = {};
+    YEARS.forEach(function(y){
+      (yearData[y]||[]).forEach(function(r){
+        var t = r.permittypedescr;
+        if (t) typeCounts[t] = (typeCounts[t]||0) + 1;
+      });
+    });
+    var sorted = Object.entries(typeCounts).sort(function(a,b){return b[1]-a[1];});
+    var sel = document.getElementById('bpa-type-filter');
+    // Clear existing options except "All types"
+    while (sel.options.length > 1) sel.remove(1);
+    sorted.forEach(function(e){
+      var o = document.createElement('option');
+      o.value = e[0];
+      o.textContent = e[0] + ' (' + e[1].toLocaleString() + ')';
+      sel.appendChild(o);
+    });
+  }
+
   // ── Year chart ─────────────────────────────────────────
 
-  function renderYearFromCounts(byYear) {
-    var yrs    = Object.keys(byYear).map(Number).filter(function(y){return y>=2010&&y<=2026;}).sort(function(a,b){return a-b;});
-    var peak   = yrs.reduce(function(b,y){return (byYear[y]||0)>(byYear[b]||0)?y:b;}, yrs[0]);
-    var counts = yrs.map(function(y){return byYear[y]||0;});
-    var colors = yrs.map(function(y){return y===2026?'#2a7a4a':y===peak?'#C49A3C':'#1C2B4A';});
+  window.bpaRenderYear = function() {
+    var tf = document.getElementById('bpa-type-filter').value;
+    var counts = {};
+    YEARS.forEach(function(y){
+      var recs = yearData[y] || [];
+      counts[y] = tf === 'all' ? recs.length : recs.filter(function(r){ return r.permittypedescr === tf; }).length;
+    });
+    var peak   = YEARS.reduce(function(b,y){ return counts[y]>counts[b]?y:b; }, YEARS[0]);
+    var vals   = YEARS.map(function(y){ return counts[y]; });
+    var colors = YEARS.map(function(y){ return y===2026?'#2a7a4a':y===peak?'#C49A3C':'#1C2B4A'; });
 
     if (yearChart) yearChart.destroy();
     yearChart = new Chart(document.getElementById('bpaYearChart'), {
       type: 'bar',
-      data: { labels: yrs.map(String), datasets: [{ data: counts, backgroundColor: colors, borderRadius: 3, borderSkipped: false }] },
+      data: { labels: YEARS.map(String), datasets: [{ data: vals, backgroundColor: colors, borderRadius: 3, borderSkipped: false }] },
       options: { responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { ...tt, callbacks: { afterLabel: function(ctx) {
-          var pct = Math.round((ctx.raw/(byYear[peak]||1))*100);
-          return yrs[ctx.dataIndex]===peak ? '← peak year' : pct+'% of peak';
+          var pct = Math.round((ctx.raw/(counts[peak]||1))*100);
+          return YEARS[ctx.dataIndex]===peak ? '← peak year' : pct+'% of peak';
         }}}},
         scales: {
           x: { grid: { display: false }, ticks: { ...tk, maxRotation: 0, autoSkip: false } },
@@ -262,50 +281,35 @@
       }
     });
 
-    var total = counts.reduce(function(a,b){return a+b;},0);
-    document.getElementById('bpa-year-status').textContent = total.toLocaleString()+' total permits · 2010–'+yrs[yrs.length-1]+' · City of Boston ISD';
+    var total = vals.reduce(function(a,b){return a+b;},0);
+    document.getElementById('bpa-year-status').textContent =
+      total.toLocaleString() + ' total permits · 2010–2026 · City of Boston ISD';
 
     var ins = document.getElementById('bpa-year-insight');
-    var y24c = byYear[2024]||0, pC = byYear[peak]||0;
+    var y24c = counts[2024]||0, pC = counts[peak]||0;
     if (pC && y24c) {
       ins.style.display = 'block';
       ins.innerHTML = '<strong>Key takeaway:</strong> Boston permitting peaked in <strong>'+peak+'</strong> with <strong>'+pC.toLocaleString()+' permits</strong> and has fallen <strong>'+Math.round((1-y24c/pC)*100)+'%</strong> through 2024. This constrained supply environment means permitted projects carry significant competitive advantage.';
-    }
-  }
-
-  window.bpaTypeFilterChanged = function() {
-    var tf = document.getElementById('bpa-type-filter').value;
-    var wrap = document.querySelector('#bpa-year .bpa-chart-wrap');
-    wrap.innerHTML = '<div class="bpa-loading-overlay"><div class="bpa-spinner"></div> Loading…</div>';
-
-    if (tf === 'all') {
-      // Use pre-fetched aggregate counts
-      renderYearFromCounts(yearCountsAll);
-      wrap.innerHTML = '';
-      wrap.innerHTML = '<canvas id="bpaYearChart"></canvas>';
-      renderYearFromCounts(yearCountsAll);
-      updateMetrics(yearCountsAll);
-    } else {
-      fetchByType(tf).then(function(records) {
-        allData = records;
-        var byYear = groupBy(records, function(r){ return getYear(r.issued_date); });
-        wrap.innerHTML = '<canvas id="bpaYearChart"></canvas>';
-        renderYearFromCounts(byYear);
-        updateMetrics(byYear);
-      });
     }
   };
 
   // ── Month chart ────────────────────────────────────────
 
-  // yearMonthData: { "2026": [jan,feb,...dec], "2025": [...], ... }
-  var yearMonthData = {};
-
   window.bpaRenderMonth = function() {
     var cY  = parseInt(document.getElementById('bpa-cmp-year').value);
     var mo  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var cur  = yearMonthData[2026] || mo.map(function(){return 0;});
-    var prev = yearMonthData[cY]   || mo.map(function(){return 0;});
+
+    function getMonthlyCounts(yr) {
+      var counts = [0,0,0,0,0,0,0,0,0,0,0,0];
+      (yearData[yr]||[]).forEach(function(r){
+        var m = getMonth(r.issued_date);
+        if (m >= 1 && m <= 12) counts[m-1]++;
+      });
+      return counts;
+    }
+
+    var cur  = getMonthlyCounts(2026);
+    var prev = getMonthlyCounts(cY);
 
     if (monthChart) monthChart.destroy();
     monthChart = new Chart(document.getElementById('bpaMonthChart'), {
@@ -327,7 +331,7 @@
     var ytdC  = prev.slice(0, new Date().getMonth()+1).reduce(function(a,b){return a+b;},0);
     var diff  = ytd26 - ytdC;
     document.getElementById('bpa-month-status').textContent =
-      '2026 YTD: '+ytd26+' permits · same period '+cY+': '+ytdC+' ('+(diff>=0?'+':'')+diff+') · City of Boston ISD';
+      '2026 YTD: '+ytd26+' · same period '+cY+': '+ytdC+' ('+(diff>=0?'+':'')+diff+') · City of Boston ISD';
 
     var ins = document.getElementById('bpa-month-insight');
     ins.style.display = 'block';
@@ -338,15 +342,13 @@
 
   // ── Type chart ─────────────────────────────────────────
 
-  var typeYearData = {}; // { "2026": { "Long Form": 123, ... }, ... }
-
   window.bpaRenderType = function() {
-    var yr     = document.getElementById('bpa-type-year').value;
-    var byT    = typeYearData[yr] || {};
+    var yr  = parseInt(document.getElementById('bpa-type-year').value);
+    var byT = groupBy(yearData[yr]||[], function(r){ return r.permittypedescr||'Unknown'; });
     var sorted = Object.entries(byT).sort(function(a,b){return b[1]-a[1];}).slice(0,14);
     var labels = sorted.map(function(e){ var k=e[0]; return k.length>35?k.substring(0,33)+'…':k; });
     var vals   = sorted.map(function(e){ return e[1]; });
-    var max    = vals[0] || 1;
+    var max    = vals[0]||1;
     var colors = vals.map(function(v){ return 'rgba(28,43,74,'+(0.35+0.65*(v/max)).toFixed(2)+')'; });
 
     if (typeChart) typeChart.destroy();
@@ -367,18 +369,19 @@
 
     var total = vals.reduce(function(a,b){return a+b;},0);
     document.getElementById('bpa-type-status').textContent =
-      total.toLocaleString()+' total permits · '+(yr==='2026'?'2026 YTD':yr)+' · City of Boston ISD';
+      total.toLocaleString()+' total permits · '+(yr===2026?'2026 YTD':yr)+' · City of Boston ISD';
   };
 
   // ── Tabs ───────────────────────────────────────────────
 
   window.bpaShow = function(v, btn) {
-    document.querySelectorAll('.bpa-view').forEach(function(el){el.classList.remove('bpa-active');});
-    document.querySelectorAll('.bpa-tab').forEach(function(el){el.classList.remove('bpa-active');});
+    document.querySelectorAll('.bpa-view').forEach(function(el){ el.classList.remove('bpa-active'); el.style.display='none'; });
+    document.querySelectorAll('.bpa-tab').forEach(function(el){ el.classList.remove('bpa-active'); });
     document.getElementById('bpa-'+v).classList.add('bpa-active');
+    document.getElementById('bpa-'+v).style.display = 'block';
     btn.classList.add('bpa-active');
-    if (v==='month' && dataLoaded) bpaRenderMonth();
-    if (v==='type'  && dataLoaded) bpaRenderType();
+    if (v==='month') bpaRenderMonth();
+    if (v==='type')  bpaRenderType();
   };
 
   // ── Snapshot ───────────────────────────────────────────
@@ -403,62 +406,29 @@
     var a=document.createElement('a'); a.download=filename+'.png'; a.href=off.toDataURL('image/png'); a.click();
   };
 
-  // ── Init ───────────────────────────────────────────────
+  // ── Init: fetch one year at a time sequentially ────────
 
-  Promise.all([
-    fetchYearCounts(),
-    fetchYearMonthCounts(),
-    fetchPermitTypes()
-  ]).then(function(results) {
-    var yrRows   = results[0];
-    var ymRows   = results[1];
-    var typeRows = results[2];
-
-    // Build yearCountsAll from aggregate query
-    yrRows.forEach(function(r) {
-      var y = parseInt(r.yr);
-      if (y >= 2010 && y <= 2026) yearCountsAll[y] = parseInt(r.cnt);
-    });
-
-    // Build yearMonthData
-    ymRows.forEach(function(r) {
-      var y = parseInt(r.yr), m = parseInt(r.mo);
-      if (y < 2010 || y > 2026 || !m) return;
-      if (!yearMonthData[y]) yearMonthData[y] = [0,0,0,0,0,0,0,0,0,0,0,0];
-      yearMonthData[y][m-1] = parseInt(r.cnt);
-    });
-
-    // Build typeYearData from permit types + year counts per type
-    // We'll use a separate aggregate query for this
-    var typeSql = 'SELECT SUBSTRING(issued_date,1,4) as yr, permittypedescr, COUNT(*) as cnt FROM "'+RID+'" WHERE issued_date >= \'2010-01-01\' AND permittypedescr IS NOT NULL GROUP BY yr, permittypedescr';
-    return sqlFetch(typeSql).then(function(json) {
-      var rows = json.result && json.result.records ? json.result.records : [];
-      rows.forEach(function(r) {
-        var y = r.yr; var t = r.permittypedescr; var c = parseInt(r.cnt);
-        if (!typeYearData[y]) typeYearData[y] = {};
-        typeYearData[y][t] = c;
+  function fetchAllYears(index) {
+    if (index >= YEARS.length) {
+      setProgress(YEARS.length, YEARS.length, 'Data loaded');
+      showDashboard();
+      return;
+    }
+    var year = YEARS[index];
+    setProgress(index, YEARS.length, 'Loading ' + year + ' permits…');
+    fetchYear(year)
+      .then(function(records) {
+        yearData[year] = records;
+        fetchAllYears(index + 1);
+      })
+      .catch(function(err) {
+        console.warn('Failed to load ' + year + ', skipping:', err);
+        yearData[year] = [];
+        fetchAllYears(index + 1);
       });
+  }
 
-      // Populate type dropdown from typeRows (has all types with counts)
-      var sel = document.getElementById('bpa-type-filter');
-      typeRows.forEach(function(r) {
-        if (!r.permittypedescr) return;
-        var o = document.createElement('option');
-        o.value = r.permittypedescr;
-        o.textContent = r.permittypedescr + ' (' + parseInt(r.cnt).toLocaleString() + ')';
-        sel.appendChild(o);
-      });
-
-      // Render everything
-      updateMetrics(yearCountsAll);
-      renderYearFromCounts(yearCountsAll);
-      dataLoaded = true;
-    });
-
-  }).catch(function(e) {
-    document.getElementById('bpa-metrics').innerHTML = '';
-    document.getElementById('bpa-year').innerHTML = '<div class="bpa-error"><p>Could not load permit data. Please try refreshing the page.</p></div>';
-  });
+  fetchAllYears(0);
 
 })();
 </script>
