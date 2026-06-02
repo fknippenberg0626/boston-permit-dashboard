@@ -163,6 +163,17 @@
   var RID  = '6ddcd912-32a0-43df-9908-63574f8c7e77';
   var YEARS = [2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026];
 
+  var EXCLUDED_TYPES = [
+    'Plumbing',
+    'Electrical',
+    'Gas',
+    'Electrical Low Voltage',
+    'Electrical Fire Alarms',
+    'Electrical Temporary Service',
+    'Certificate of Occupancy',
+    'Use of Premises'
+  ];
+
   // Master data store: yearData[year] = array of {issued_date, permittypedescr}
   var yearData = {};
   var yearChart, monthChart, typeChart;
@@ -188,7 +199,8 @@
     return fetch(url)
       .then(function(r){ return r.json(); })
       .then(function(json){
-        return json.result && json.result.records ? json.result.records : [];
+        var recs = json.result && json.result.records ? json.result.records : [];
+        return recs.filter(function(r){ return EXCLUDED_TYPES.indexOf(r.permittypedescr) === -1; });
       });
   }
 
