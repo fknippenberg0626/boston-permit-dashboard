@@ -165,7 +165,7 @@
 
   function fetchAllERT() {
     var url = BASE + '?resource_id=' + RID
-      + '&filters=%7B%22permittypedescr%22%3A%22Erect%2FNew%2BConstruction%22%7D'
+      + '&filters=%7B%22permittypedescr%22%3A%22Erect%2FNew%20Construction%22%7D'
       + '&fields=issued_date%2Cpermittypedescr&limit=10000';
     console.log('Fetching ERT data:', url);
     return fetch(url)
@@ -356,7 +356,7 @@
   // ── Init ────
   setProgress(0, 1, 'Loading new construction permits...');
   var ertUrl = BASE + '?resource_id=' + RID
-    + '&filters=%7B%22permittypedescr%22%3A%22Erect%2FNew%2BConstruction%22%7D'
+    + '&filters=%7B%22permittypedescr%22%3A%22Erect%2FNew%20Construction%22%7D'
     + '&fields=issued_date%2Cpermittypedescr&limit=10000';
   console.log('Fetching:', ertUrl);
   fetch(ertUrl)
