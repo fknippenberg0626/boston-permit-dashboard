@@ -41,8 +41,11 @@
   .bpa-filters label { font-size: 12px; color: #6B6965; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
   .bpa-filters select { font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 6px 10px; border-radius: 6px; border: 1px solid #DDD9CF; background: #fff; color: #1C2B4A; cursor: pointer; }
 
-  .bpa-snap { margin-left: auto; padding: 7px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; border-radius: 6px; border: 1px solid #DDD9CF; background: #fff; color: #6B6965; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
+  .bpa-snap-group { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .bpa-snap { padding: 7px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; border-radius: 6px; border: 1px solid #DDD9CF; background: #fff; color: #6B6965; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
   .bpa-snap:hover { background: #1C2B4A; color: #fff; border-color: #1C2B4A; }
+  .bpa-snap-social { border-color: #C49A3C; color: #C49A3C; }
+  .bpa-snap-social:hover { background: #C49A3C; color: #fff; border-color: #C49A3C; }
   .bpa-snap svg { width: 14px; height: 14px; }
 
   .bpa-legend { display: flex; gap: 18px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -89,20 +92,21 @@
   <nav class="bpa-tabs" role="tablist" style="display:none;" id="bpa-tabs">
     <button class="bpa-tab bpa-active" role="tab" onclick="bpaShow('year',this)">By year</button>
     <button class="bpa-tab" role="tab" onclick="bpaShow('month',this)">2026 month by month</button>
-    <button class="bpa-tab" role="tab" onclick="bpaShow('type',this)">By permit type</button>
   </nav>
 
   <!-- Year view -->
   <section id="bpa-year" class="bpa-view bpa-active" style="display:none;">
     <div class="bpa-filters">
-      <label for="bpa-type-filter">Permit type</label>
-      <select id="bpa-type-filter" onchange="bpaRenderYear()">
-        <option value="all">All types</option>
-      </select>
-      <button class="bpa-snap" onclick="bpaSnap('bpaYearChart','boston-permits-by-year')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download snapshot
-      </button>
+      <div class="bpa-snap-group">
+        <button class="bpa-snap" onclick="bpaSnapWide('bpaYearChart','boston-new-construction-by-year')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          PowerPoint (16:9)
+        </button>
+        <button class="bpa-snap bpa-snap-social" onclick="bpaSnapSocial('boston-new-construction-social')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Social (portrait)
+        </button>
+      </div>
     </div>
     <div class="bpa-legend">
       <div class="bpa-legend-item"><span class="bpa-legend-sq" style="background:#1C2B4A;"></span>Historical</div>
@@ -123,10 +127,16 @@
         <option value="2024">2024</option>
         <option value="2023">2023</option>
       </select>
-      <button class="bpa-snap" onclick="bpaSnap('bpaMonthChart','boston-permits-2026-monthly')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download snapshot
-      </button>
+      <div class="bpa-snap-group">
+        <button class="bpa-snap" onclick="bpaSnapWide('bpaMonthChart','boston-permits-2026-monthly')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          PowerPoint (16:9)
+        </button>
+        <button class="bpa-snap bpa-snap-social" onclick="bpaSnapWide('bpaMonthChart','boston-permits-2026-monthly-social',true)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Social (square)
+        </button>
+      </div>
     </div>
     <div class="bpa-legend">
       <div class="bpa-legend-item"><span class="bpa-legend-sq" style="background:#2a7a4a;"></span>2026</div>
@@ -137,24 +147,7 @@
     <div class="bpa-insight" id="bpa-month-insight" style="display:none;"></div>
   </section>
 
-  <!-- Type view -->
-  <section id="bpa-type" class="bpa-view">
-    <div class="bpa-filters">
-      <label for="bpa-type-year">Year</label>
-      <select id="bpa-type-year" onchange="bpaRenderType()">
-        <option value="2026">2026 YTD</option>
-        <option value="2025">2025</option>
-        <option value="2024">2024</option>
-        <option value="2023">2023</option>
-      </select>
-      <button class="bpa-snap" onclick="bpaSnap('bpaTypeChart','boston-permits-by-type')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download snapshot
-      </button>
-    </div>
-    <div class="bpa-chart-wrap bpa-tall" id="bpa-type-wrap"><canvas id="bpaTypeChart"></canvas></div>
-    <div class="bpa-chart-footer"><span class="bpa-status" id="bpa-type-status"></span></div>
-  </section>
+  <!-- Type view removed - dashboard focused on Erect/New Construction only -->
 
 </div>
 <script>
@@ -163,16 +156,7 @@
   var RID  = '6ddcd912-32a0-43df-9908-63574f8c7e77';
   var YEARS = [2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026];
 
-  var EXCLUDED_TYPES = [
-    'Plumbing',
-    'Electrical',
-    'Gas',
-    'Electrical Low Voltage',
-    'Electrical Fire Alarms',
-    'Electrical Temporary Service',
-    'Certificate of Occupancy',
-    'Use of Premises'
-  ];
+  var INCLUDED_TYPES = ['Erect/New Construction'];
 
   // Master data store: yearData[year] = array of {issued_date, permittypedescr}
   var yearData = {};
@@ -200,7 +184,7 @@
       .then(function(r){ return r.json(); })
       .then(function(json){
         var recs = json.result && json.result.records ? json.result.records : [];
-        return recs.filter(function(r){ return EXCLUDED_TYPES.indexOf(r.permittypedescr) === -1; });
+        return recs.filter(function(r){ return INCLUDED_TYPES.indexOf(r.permittypedescr) !== -1; });
       });
   }
 
@@ -235,9 +219,9 @@
     var pN=counts[peak]||1, y24=counts[2024]||0, y25=counts[2025]||0, y26=counts[2026]||0;
     var drop=Math.round((1-y24/pN)*100), pace=y25?Math.round((y26/y25)*100):null;
     document.getElementById('bpa-metrics').innerHTML =
-      '<div class="bpa-metric bpa-accent"><div class="bpa-metric-label">Peak year</div><div class="bpa-metric-val">'+peak+'</div><div class="bpa-metric-sub">'+pN.toLocaleString()+' permits issued</div><div class="bpa-accent-bar"></div></div>'+
-      '<div class="bpa-metric"><div class="bpa-metric-label">2024 full year</div><div class="bpa-metric-val">'+y24.toLocaleString()+'</div><div class="bpa-metric-sub bpa-down">↓ '+drop+'% below peak</div></div>'+
-      '<div class="bpa-metric"><div class="bpa-metric-label">2025 full year</div><div class="bpa-metric-val">'+y25.toLocaleString()+'</div><div class="bpa-metric-sub '+(y25>y24?'bpa-up':'bpa-down')+'">'+(y25>y24?'↑':'↓')+' vs 2024</div></div>'+
+      '<div class="bpa-metric bpa-accent"><div class="bpa-metric-label">Peak year</div><div class="bpa-metric-val">'+peak+'</div><div class="bpa-metric-sub">'+pN.toLocaleString()+' new construction permits</div><div class="bpa-accent-bar"></div></div>'+
+      '<div class="bpa-metric"><div class="bpa-metric-label">2024 new construction</div><div class="bpa-metric-val">'+y24.toLocaleString()+'</div><div class="bpa-metric-sub bpa-down">↓ '+drop+'% below peak</div></div>'+
+      '<div class="bpa-metric"><div class="bpa-metric-label">2025 new construction</div><div class="bpa-metric-val">'+y25.toLocaleString()+'</div><div class="bpa-metric-sub '+(y25>y24?'bpa-up':'bpa-down')+'">'+(y25>y24?'↑':'↓')+' vs 2024</div></div>'+
       '<div class="bpa-metric"><div class="bpa-metric-label">2026 YTD</div><div class="bpa-metric-val">'+y26.toLocaleString()+'</div><div class="bpa-metric-sub '+(pace&&pace>=100?'bpa-up':'bpa-down')+'">'+(pace?(pace>=100?'↑':'↓')+' '+pace+'% of 2025 pace':'—')+'</div></div>';
   }
 
@@ -301,7 +285,7 @@
     var y24c = counts[2024]||0, pC = counts[peak]||0;
     if (pC && y24c) {
       ins.style.display = 'block';
-      ins.innerHTML = '<strong>Key takeaway:</strong> Boston permitting peaked in <strong>'+peak+'</strong> with <strong>'+pC.toLocaleString()+' permits</strong> and has fallen <strong>'+Math.round((1-y24c/pC)*100)+'%</strong> through 2024. This constrained supply environment means permitted projects carry significant competitive advantage.';
+      ins.innerHTML = '<strong>Key takeaway:</strong> Boston new construction permitting peaked in <strong>'+peak+'</strong> with <strong>'+pC.toLocaleString()+' permits</strong> and has fallen <strong>'+Math.round((1-y24c/pC)*100)+'%</strong> through 2024. This constrained supply environment means permitted projects carry significant competitive advantage.';
     }
   };
 
@@ -396,26 +380,168 @@
     if (v==='type')  bpaRenderType();
   };
 
-  // ── Snapshot ───────────────────────────────────────────
+  // ── Snapshot helpers ───────────────────────────────────
 
-  window.bpaSnap = function(canvasId, filename) {
+  function bpaDrawHeader(ctx, w, title, subtitle) {
+    ctx.fillStyle = '#1C2B4A'; ctx.fillRect(0, 0, w, 72);
+    ctx.fillStyle = 'rgba(196,154,60,0.15)'; ctx.fillRect(0, 0, w, 72);
+    ctx.fillStyle = '#C49A3C'; ctx.font = '500 11px DM Sans,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('BOSTON PERMIT ADVISORS · bostonpermitadvisors.com', 32, 28);
+    ctx.fillStyle = '#ffffff'; ctx.font = '500 18px DM Sans,sans-serif';
+    ctx.fillText(title, 32, 56);
+    if (subtitle) {
+      ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = '400 13px DM Sans,sans-serif';
+      ctx.fillText(subtitle, 32, 74);
+    }
+  }
+
+  function bpaDrawFooter(ctx, w, h) {
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '10px DM Sans,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Source: City of Boston ISD · data.boston.gov', 32, h - 12);
+    ctx.textAlign = 'right';
+    ctx.fillText(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }), w - 32, h - 12);
+  }
+
+  function bpaDownload(canvas, filename) {
+    var a = document.createElement('a');
+    a.download = filename + '.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  }
+
+  // Wide 16:9 — for PowerPoint / presentations (1920×1080)
+  window.bpaSnapWide = function(canvasId, filename, square) {
     var src = document.getElementById(canvasId); if (!src) return;
-    var off = document.createElement('canvas'); off.width=1200; off.height=630;
+    var W = square ? 1080 : 1920, H = square ? 1080 : 1080;
+    var off = document.createElement('canvas'); off.width = W; off.height = H;
     var ctx = off.getContext('2d');
-    ctx.fillStyle='#1C2B4A'; ctx.fillRect(0,0,1200,630);
-    ctx.fillStyle='rgba(196,154,60,0.12)'; ctx.fillRect(0,0,1200,70);
-    ctx.fillStyle='#C49A3C'; ctx.font='500 12px DM Sans,sans-serif';
-    ctx.fillText('BOSTON PERMIT ADVISORS · bostonpermitadvisors.com',36,44);
-    ctx.fillStyle='#ffffff'; ctx.font='400 20px DM Sans,sans-serif';
-    ctx.fillText('Boston Building Permit Trends',36,66);
-    ctx.fillStyle='#ffffff'; ctx.fillRect(36,88,1128,470);
-    var scale=Math.min(1100/src.width,450/src.height);
-    ctx.drawImage(src,(1200-src.width*scale)/2,96,src.width*scale,src.height*scale);
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font='11px DM Sans,sans-serif';
-    ctx.fillText('Source: City of Boston ISD Approved Building Permits · data.boston.gov',36,614);
-    ctx.textAlign='right';
-    ctx.fillText(new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}),1164,614);
-    var a=document.createElement('a'); a.download=filename+'.png'; a.href=off.toDataURL('image/png'); a.click();
+
+    // Background
+    ctx.fillStyle = '#1C2B4A'; ctx.fillRect(0, 0, W, H);
+
+    // Header band
+    ctx.fillStyle = 'rgba(196,154,60,0.12)'; ctx.fillRect(0, 0, W, 80);
+    ctx.fillStyle = '#C49A3C'; ctx.font = '500 13px DM Sans,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('BOSTON PERMIT ADVISORS · bostonpermitadvisors.com', 40, 30);
+    ctx.fillStyle = '#ffffff'; ctx.font = '500 22px DM Sans,sans-serif';
+    ctx.fillText('Boston New Construction Permits · Erect/New Construction', 40, 62);
+
+    // White chart area
+    var pad = 40, chartTop = 96, chartH = H - chartTop - 56;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(pad, chartTop, W - pad*2, chartH);
+
+    // Draw chart
+    var scale = Math.min((W - pad*2 - 20) / src.width, (chartH - 20) / src.height);
+    var cw = src.width * scale, ch = src.height * scale;
+    ctx.drawImage(src, pad + ((W - pad*2) - cw)/2, chartTop + (chartH - ch)/2, cw, ch);
+
+    // Footer
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '11px DM Sans,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Source: City of Boston ISD Approved Building Permits · data.boston.gov', 40, H - 16);
+    ctx.textAlign = 'right';
+    ctx.fillText(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }), W - 40, H - 16);
+
+    bpaDownload(off, filename);
+  };
+
+  // Portrait social — 1080×1350 (Instagram/LinkedIn portrait)
+  // Draws a custom vertical bar chart directly on canvas so years read clearly
+  window.bpaSnapSocial = function(filename) {
+    var W = 1080, H = 1350;
+    var off = document.createElement('canvas'); off.width = W; off.height = H;
+    var ctx = off.getContext('2d');
+
+    // Background
+    ctx.fillStyle = '#1C2B4A'; ctx.fillRect(0, 0, W, H);
+
+    // Header
+    ctx.fillStyle = 'rgba(196,154,60,0.12)'; ctx.fillRect(0, 0, W, 90);
+    ctx.fillStyle = '#C49A3C'; ctx.font = '600 13px DM Sans,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('BOSTON PERMIT ADVISORS', 40, 32);
+    ctx.fillStyle = '#ffffff'; ctx.font = '600 26px DM Sans,sans-serif';
+    ctx.fillText('Boston New Construction', 40, 64);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '400 18px DM Sans,sans-serif';
+    ctx.fillText('Erect/New Construction Permits · 2010–2026', 40, 88);
+
+    // Build data
+    var counts = {}, peak = YEARS[0];
+    YEARS.forEach(function(y) {
+      counts[y] = (yearData[y] || []).length;
+      if (counts[y] > counts[peak]) peak = y;
+    });
+    var maxVal = counts[peak] || 1;
+
+    // Chart layout — horizontal bars, years as rows
+    var chartTop = 116, chartBottom = H - 130;
+    var chartH = chartBottom - chartTop;
+    var rowH = Math.floor(chartH / YEARS.length);
+    var labelW = 58, barMaxW = W - labelW - 100, barLeft = labelW + 40;
+
+    YEARS.forEach(function(y, i) {
+      var val = counts[y] || 0;
+      var barW = Math.round((val / maxVal) * barMaxW);
+      var y0 = chartTop + i * rowH;
+      var barY = y0 + Math.round(rowH * 0.18);
+      var barH = Math.round(rowH * 0.64);
+
+      // Bar color
+      if (y === 2026) ctx.fillStyle = '#2a7a4a';
+      else if (y === peak) ctx.fillStyle = '#C49A3C';
+      else ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.beginPath();
+      ctx.roundRect(barLeft, barY, Math.max(barW, 4), barH, 3);
+      ctx.fill();
+
+      // Peak highlight glow strip
+      if (y === peak) {
+        ctx.fillStyle = 'rgba(196,154,60,0.08)';
+        ctx.fillRect(0, y0, W, rowH);
+      }
+
+      // Year label
+      ctx.fillStyle = y === peak ? '#C49A3C' : y === 2026 ? '#86efac' : 'rgba(255,255,255,0.75)';
+      ctx.font = (y === peak || y === 2026) ? '600 15px DM Sans,sans-serif' : '400 14px DM Sans,sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(String(y), barLeft - 10, barY + barH/2 + 5);
+
+      // Value label at end of bar
+      if (val > 0) {
+        ctx.fillStyle = y === peak ? '#C49A3C' : y === 2026 ? '#86efac' : 'rgba(255,255,255,0.55)';
+        ctx.font = (y === peak || y === 2026) ? '600 13px DM Sans,sans-serif' : '400 12px DM Sans,sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(val.toLocaleString(), barLeft + barW + 8, barY + barH/2 + 4);
+      }
+    });
+
+    // Legend row
+    var lgY = chartBottom + 20;
+    ctx.fillStyle = '#1C2B4A'; ctx.fillRect(0, lgY - 4, W, 52);
+    ctx.fillStyle = 'rgba(196,154,60,0.15)'; ctx.fillRect(0, lgY - 4, W, 52);
+
+    function lgItem(x, color, label) {
+      ctx.fillStyle = color; ctx.fillRect(x, lgY + 14, 14, 14);
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '400 13px DM Sans,sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, x + 20, lgY + 25);
+    }
+    lgItem(40,  'rgba(255,255,255,0.18)', 'Historical');
+    lgItem(200, '#C49A3C', 'Peak year (' + peak + ')');
+    lgItem(440, '#2a7a4a', '2026 YTD');
+
+    // Footer
+    ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = '11px DM Sans,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Source: City of Boston ISD · data.boston.gov', 40, H - 14);
+    ctx.textAlign = 'right';
+    ctx.fillText(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }), W - 40, H - 14);
+
+    bpaDownload(off, filename);
   };
 
   // ── Init: fetch one year at a time sequentially ────────
